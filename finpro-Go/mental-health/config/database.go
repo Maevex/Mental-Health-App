@@ -9,6 +9,7 @@ import (
 )
 
 var DB *sql.DB
+var JWTSecret = []byte("your_secret_key")
 
 func ConnectDB() {
 	var err error
