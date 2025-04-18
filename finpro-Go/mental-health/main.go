@@ -6,9 +6,19 @@ import (
 	"mental-health/config"
 	"mental-health/routes"
 	"net/http"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Debugging: Cek apakah API key terbaca
+
 	// Koneksi database
 	config.ConnectDB()
 

@@ -3,23 +3,31 @@ package config
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 var DB *sql.DB
-var JWTSecret = []byte("your_secret_key")
+var JWTSecret []byte
 
 func ConnectDB() {
-	var err error
-	DB, err = sql.Open("mysql", "root:@tcp(127.0.0.1:3306)/mental_health_v2")
+	err := godotenv.Load()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Gagal load .env, lanjut pake environment system...")
+	}
+
+	dsn := os.Getenv("DB_URL")
+	JWTSecret = []byte(os.Getenv("JWT_SECRET"))
+
+	DB, err = sql.Open("mysql", dsn)
+	if err != nil {
+		panic(err.Error())
 	}
 
 	if err = DB.Ping(); err != nil {
-		log.Fatal(err)
+		panic(err.Error())
 	}
 
 	fmt.Println("Connected to Database")
