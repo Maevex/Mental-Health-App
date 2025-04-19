@@ -106,3 +106,23 @@ func UpdateConsultant(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Konsultan berhasil diupdate"})
 }
+
+func GetConsultantByID(w http.ResponseWriter, r *http.Request) {
+	// Ambil ID dari URL
+	vars := mux.Vars(r)
+	id := vars["id"]
+
+	// Query ke DB
+	row := config.DB.QueryRow("SELECT id, nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak WHERE id = ?", id)
+
+	var consultant models.KonsultanKontak
+	err := row.Scan(&consultant.ID, &consultant.Nama, &consultant.Spesialisasi, &consultant.Pengalaman, &consultant.NoTelepon, &consultant.Email)
+	if err != nil {
+		http.Error(w, "Konsultan tidak ditemukan", http.StatusNotFound)
+		return
+	}
+
+	// Kirim response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(consultant)
+}

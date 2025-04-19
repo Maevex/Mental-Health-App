@@ -29,5 +29,6 @@ func SetupRoutes() *mux.Router {
 	r.Handle("/consultants", middlewares.AdminMiddleware(http.HandlerFunc(controllers.GetAllConsultants))).Methods("GET")
 	r.Handle("/consultantDel/{id}", middlewares.AdminMiddleware(http.HandlerFunc(controllers.DeleteConsultant))).Methods("DELETE")
 	r.Handle("/consultantUpdate/{id}", middlewares.AdminMiddleware(http.HandlerFunc(controllers.UpdateConsultant))).Methods("PUT")
+	r.Handle("/consultant/{id}", middlewares.AdminMiddleware(http.HandlerFunc(controllers.GetConsultantByID))).Methods("GET")
 	return r
 }
