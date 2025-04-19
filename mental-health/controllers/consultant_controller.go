@@ -31,8 +31,9 @@ func CreateConsultant(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetAllConsultants(w http.ResponseWriter, r *http.Request) {
-	rows, err := config.DB.Query("SELECT id, nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak")
+	rows, err := config.DB.Query("SELECT konsultan_id, nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak")
 	if err != nil {
+
 		http.Error(w, "Failed to fetch consultants", http.StatusInternalServerError)
 		return
 	}
@@ -59,7 +60,7 @@ func DeleteConsultant(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	// Eksekusi query DELETE
-	result, err := config.DB.Exec("DELETE FROM konsultan_kontak WHERE id = ?", id)
+	result, err := config.DB.Exec("DELETE FROM konsultan_kontak WHERE konsultan_id = ?", id)
 	if err != nil {
 		http.Error(w, "Gagal menghapus data konsultan", http.StatusInternalServerError)
 		return
@@ -90,7 +91,7 @@ func UpdateConsultant(w http.ResponseWriter, r *http.Request) {
 	result, err := config.DB.Exec(`
 		UPDATE konsultan_kontak 
 		SET nama = ?, spesialisasi = ?, pengalaman = ?, no_telepon = ?, email = ? 
-		WHERE id = ?`,
+		WHERE konsultan_id = ?`,
 		updatedData.Nama, updatedData.Spesialisasi, updatedData.Pengalaman, updatedData.NoTelepon, updatedData.Email, id)
 	if err != nil {
 		http.Error(w, "Gagal mengupdate data konsultan", http.StatusInternalServerError)
