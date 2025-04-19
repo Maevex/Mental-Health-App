@@ -80,7 +80,7 @@ func ChatHandler(db *sql.DB) http.HandlerFunc {
 					http.Error(w, "Gagal membaca data konsultan", http.StatusInternalServerError)
 					return
 				}
-				response += fmt.Sprintf("*%s*\n📚 Spesialisasi: %s\n🧠 Pengalaman: %s\n📞 %s\n📧 %s\n\n", nama, spesialisasi, pengalaman, noTelepon, email)
+				response += fmt.Sprintf("*%s*\n Spesialisasi: %s\n Pengalaman: %s\n %s\n %s\n\n", nama, spesialisasi, pengalaman, noTelepon, email)
 			}
 
 			w.Header().Set("Content-Type", "application/json")
