@@ -114,7 +114,7 @@ func GetConsultantByID(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 
 	// Query ke DB
-	row := config.DB.QueryRow("SELECT id, nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak WHERE id = ?", id)
+	row := config.DB.QueryRow("SELECT konsultan_id, nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak WHERE id = ?", id)
 
 	var consultant models.KonsultanKontak
 	err := row.Scan(&consultant.ID, &consultant.Nama, &consultant.Spesialisasi, &consultant.Pengalaman, &consultant.NoTelepon, &consultant.Email)
