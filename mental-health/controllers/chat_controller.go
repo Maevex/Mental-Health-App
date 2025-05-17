@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mental-health/config"
 	middlewares "mental-health/middleware"
 	"mental-health/models"
@@ -89,6 +90,7 @@ func ChatHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		chatbotResponse, err := getGeminiResponse(userInput.Message)
+
 		if err != nil {
 			http.Error(w, "Error getting chatbot response", http.StatusInternalServerError)
 			return
@@ -125,7 +127,7 @@ func saveChatbotResponse(db *sql.DB, pesanID int, response string) {
 
 func getGeminiResponse(userInput string) (string, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
-	url := "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=" + apiKey
+	url := "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" + apiKey
 
 	requestBody, _ := json.Marshal(map[string]interface{}{
 		"contents": []map[string]interface{}{
@@ -139,8 +141,14 @@ func getGeminiResponse(userInput string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(bodyBytes)) // log output
+
+	// lalu decode dari bodyBytes, bukan resp.Body lagi
 	var geminiResp GeminiResponse
-	json.NewDecoder(resp.Body).Decode(&geminiResp)
+	if err := json.Unmarshal(bodyBytes, &geminiResp); err != nil {
+		return "", err
+	}
 
 	if len(geminiResp.Candidates) > 0 && len(geminiResp.Candidates[0].Content.Parts) > 0 {
 		return geminiResp.Candidates[0].Content.Parts[0].Text, nil
@@ -270,4 +278,77 @@ func GetDetailSesiHandler(w http.ResponseWriter, r *http.Request) {
 	// Kirim response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(chatHistory)
+}
+
+func AnalisaKeluhanHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := r.Context().Value(middlewares.UserIDKey).(int)
+		fmt.Printf("UserID from context: %d\n", userID)
+		if !ok {
+			http.Error(w, "Unauthorized: Missing user_id", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			Kategori string `json:"kategori"`
+			Keluhan  string `json:"keluhan"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid input", http.StatusBadRequest)
+			return
+		}
+
+		sentimentScore := analyzeSentiment(req.Keluhan)
+		kesimpulan, err := getGeminiResponse("Buatkan ringkasan masalah berdasarkan kalimat berikut:\n" + req.Keluhan)
+		if err != nil {
+			http.Error(w, "Gagal mengambil kesimpulan dari Gemini", http.StatusInternalServerError)
+			return
+		}
+
+		// Simpan ke tabel keluhan_awal
+		_, err = db.Exec(`INSERT INTO keluhan_awal (user_id, kategori, keluhan, sentimen_score, kesimpulan_chatbot) 
+	VALUES (?, ?, ?, ?, ?)`, userID, req.Kategori, req.Keluhan, sentimentScore, kesimpulan)
+		if err != nil {
+			fmt.Printf("DB error: %v\n", err)
+			http.Error(w, "Gagal menyimpan keluhan", http.StatusInternalServerError)
+			return
+		}
+
+		// Buat response dasar
+		resp := map[string]interface{}{
+			"kesimpulan": kesimpulan,
+			"saran":      "Apakah kamu mau lanjut chat dengan chatbot kami?",
+		}
+
+		// Jika sentiment buruk, tambahkan rekomendasi konsultan
+		if sentimentScore < -0.5 {
+			rows, err := config.DB.Query(`SELECT nama, spesialisasi, pengalaman, no_telepon, email FROM konsultan_kontak`)
+			if err != nil {
+				http.Error(w, "Gagal mengambil data konsultan", http.StatusInternalServerError)
+				return
+			}
+			defer rows.Close()
+
+			var konsultanList []map[string]string
+			for rows.Next() {
+				var nama, spesialisasi, pengalaman, noTelp, email string
+				if err := rows.Scan(&nama, &spesialisasi, &pengalaman, &noTelp, &email); err != nil {
+					http.Error(w, "Gagal membaca data konsultan", http.StatusInternalServerError)
+					return
+				}
+				konsultanList = append(konsultanList, map[string]string{
+					"nama":         nama,
+					"spesialisasi": spesialisasi,
+					"pengalaman":   pengalaman,
+					"no_telepon":   noTelp,
+					"email":        email,
+				})
+			}
+			resp["rekomendasi"] = "Kami menyarankan kamu untuk menghubungi konsultan berikut:"
+			resp["konsultan"] = konsultanList
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
 }

@@ -24,6 +24,8 @@ func SetupRoutes() *mux.Router {
 	r.Handle("/chat", middlewares.JWTMiddleware(http.HandlerFunc(controllers.ChatHandler(config.DB)))).Methods("POST")
 	r.Handle("/sesi", middlewares.JWTMiddleware(http.HandlerFunc(controllers.GetSessions))).Methods("GET")
 	r.Handle("/sesi/{id}", middlewares.JWTMiddleware(http.HandlerFunc(controllers.GetDetailSesiHandler))).Methods("GET")
+	r.Handle("/analisa-keluhan", middlewares.JWTMiddleware(http.HandlerFunc(controllers.AnalisaKeluhanHandler(config.DB)))).Methods("POST")
+
 	//consultant routes
 	r.Handle("/consultantIns", middlewares.AdminMiddleware(http.HandlerFunc(controllers.CreateConsultant))).Methods("POST")
 	r.Handle("/consultants", middlewares.AdminMiddleware(http.HandlerFunc(controllers.GetAllConsultants))).Methods("GET")

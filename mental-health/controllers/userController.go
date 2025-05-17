@@ -33,21 +33,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
+		writeJSONError(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
-
 	var user models.User
 	err = config.DB.QueryRow("SELECT user_id, nama, email, password, role FROM user WHERE email = ?", req.Email).
 		Scan(&user.ID, &user.Nama, &user.Email, &user.Password, &user.Role)
 	if err != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		writeJSONError(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
 	// Cek password
 	if req.Password != user.Password {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		writeJSONError(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
@@ -61,7 +60,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	tokenString, err := token.SignedString(config.JWTSecret)
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		writeJSONError(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
@@ -171,4 +170,12 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 func PublicCheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "Server is up and running!"}`))
+}
+
+func writeJSONError(w http.ResponseWriter, message string, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": message,
+	})
 }
