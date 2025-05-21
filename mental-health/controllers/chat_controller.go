@@ -100,7 +100,11 @@ func ChatHandler(db *sql.DB) http.HandlerFunc {
 		saveChatbotResponse(db, pesanID, chatbotResponse)
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"response": chatbotResponse})
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"response": chatbotResponse,
+			"sesi_id":  sesiID,
+		})
+
 	}
 }
 
@@ -318,6 +322,7 @@ func AnalisaKeluhanHandler(db *sql.DB) http.HandlerFunc {
 		resp := map[string]interface{}{
 			"kesimpulan": kesimpulan,
 			"saran":      "Apakah kamu mau lanjut chat dengan chatbot kami?",
+			"konsultan":  []map[string]string{},
 		}
 
 		// Jika sentiment buruk, tambahkan rekomendasi konsultan
