@@ -12,5 +12,6 @@ type KeluhanAwal struct {
 	IsiKeluhan     string  `json:"isi_keluhan"`
 	SentimentScore float64 `json:"sentiment_score"`
 	Kesimpulan     string  `json:"kesimpulan"`
+	SubKategori    string  `json:"sub_kategori"`
 	Waktu          string  `json:"waktu"`
 }
