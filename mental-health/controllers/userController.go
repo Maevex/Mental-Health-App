@@ -6,9 +6,11 @@ import (
 	middlewares "mental-health/middleware"
 	"mental-health/models"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // struct request login
@@ -36,17 +38,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
+
+	// Validasi input kosong
+	if strings.TrimSpace(req.Email) == "" || strings.TrimSpace(req.Password) == "" {
+		writeJSONError(w, "Email dan password tidak boleh kosong", http.StatusBadRequest)
+		return
+	}
+
 	var user models.User
 	err = config.DB.QueryRow("SELECT user_id, nama, email, password, role FROM user WHERE email = ?", req.Email).
 		Scan(&user.ID, &user.Nama, &user.Email, &user.Password, &user.Role)
 	if err != nil {
-		writeJSONError(w, "Invalid email or password", http.StatusUnauthorized)
+		writeJSONError(w, "Email atau password salah", http.StatusUnauthorized)
 		return
 	}
 
-	// Cek password
-	if req.Password != user.Password {
-		writeJSONError(w, "Invalid email or password", http.StatusUnauthorized)
+	// Bandingkan password terenkripsi
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
+	if err != nil {
+		writeJSONError(w, "Email atau password salah", http.StatusUnauthorized)
 		return
 	}
 
@@ -121,7 +131,20 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = config.DB.Exec("INSERT INTO user (nama, email, password) VALUES (?, ?, ?)", user.Nama, user.Email, user.Password)
+	// Validasi input kosong
+	if strings.TrimSpace(user.Nama) == "" || strings.TrimSpace(user.Email) == "" || strings.TrimSpace(user.Password) == "" {
+		http.Error(w, "Nama, email, dan password tidak boleh kosong", http.StatusBadRequest)
+		return
+	}
+
+	// Enkripsi password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Gagal mengenkripsi password", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = config.DB.Exec("INSERT INTO user (nama, email, password) VALUES (?, ?, ?)", user.Nama, user.Email, hashedPassword)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
