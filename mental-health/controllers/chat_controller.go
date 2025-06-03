@@ -306,13 +306,14 @@ func AnalisaKeluhanHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		sentimentScore := analyzeSentiment(req.Keluhan)
-		prompt := fmt.Sprintf(`Sebagai seorang konsultan profesional di bidang kesehatan mental, analisis dan buatkan ringkasan masalah berdasarkan keluhan berikut.
+		prompt := fmt.Sprintf(`Sebagai seorang konsultan profesional di bidang kesehatan mental, analisis dan buatkan kesimpulan masalah berdasarkan keluhan berikut.
 
 		Kategori: %s
 		Sub-kategori: %s
 		Keluhan: %s
 
-		Tuliskan ringkasan dari sudut pandang konsultan, lalu berikan saran atau langkah awal yang dapat dilakukan oleh pengguna untuk mengatasi masalah ini. Gunakan bahasa yang empatik dan mudah dimengerti.`, req.Kategori, req.SubKategori, req.Keluhan)
+		Tuliskan ringkasan dari sudut pandang konsultan, lalu berikan saran atau langkah awal yang dapat dilakukan oleh pengguna untuk mengatasi masalah ini. Gunakan bahasa yang empatik dan mudah dimengerti, dan menggunakan 
+		pendekatan layaknya konsultan asli yang sedang berbicara kepada klien atau pasiennya.`, req.Kategori, req.SubKategori, req.Keluhan)
 
 		kesimpulan, err := getGeminiResponse(prompt)
 
