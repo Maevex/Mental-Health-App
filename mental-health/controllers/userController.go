@@ -144,7 +144,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = config.DB.Exec("INSERT INTO user (nama, email, password) VALUES (?, ?, ?)", user.Nama, user.Email, hashedPassword)
+	_, err = config.DB.Exec("INSERT INTO user (nama, email, password) VALUES (?, ?, ?)", user.Nama, user.Email, string(hashedPassword))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
