@@ -56,8 +56,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Bandingkan password terenkripsi
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
 	if err != nil {
-		writeJSONError(w, "Email atau password salah", http.StatusUnauthorized)
-		return
+		if user.Password != req.Password {
+			writeJSONError(w, "Email atau password salah", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Generate JWT token
