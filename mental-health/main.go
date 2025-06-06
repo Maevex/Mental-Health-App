@@ -25,7 +25,10 @@ func main() {
 
 	// Menambahkan middleware CORS
 	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:8081"}),                   // Origin frontend kamu
+		handlers.AllowedOrigins([]string{
+			"http://localhost:8081",
+			"http://157.66.34.218", // IP VPS kamu
+		}), // Origin frontend kamu
 		handlers.AllowedMethods([]string{"GET", "POST", "OPTIONS", "PUT", "DELETE"}), // Metode yang diizinkan
 		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),           // Headers yang diizinkan
 	)
