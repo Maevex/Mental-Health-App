@@ -22,6 +22,7 @@ import (
 type UserRequest struct {
 	Message string `json:"message"`
 	SesiID  *int   `json:"sesi_id,omitempty"`
+	Analisa string `json:"analisa,omitempty"`
 }
 
 // Struct for gemini response parsing
@@ -89,8 +90,17 @@ func ChatHandler(db *sql.DB) http.HandlerFunc {
 			json.NewEncoder(w).Encode(map[string]string{"response": response})
 			return
 		}
-
-		chatbotResponse, err := getGeminiResponse(userInput.Message)
+		var finalPrompt string
+		if userInput.Analisa != "" && userInput.SesiID == nil {
+			finalPrompt = fmt.Sprintf(
+				"Kamu adalah chatbot yang membantu user dengan masalah mental. Berikut hasil analisis awal: \"%s\".\nSekarang user berkata: %s",
+				userInput.Analisa,
+				userInput.Message,
+			)
+		} else {
+			finalPrompt = userInput.Message
+		}
+		chatbotResponse, err := getGeminiResponse(finalPrompt)
 
 		if err != nil {
 			http.Error(w, "Error getting chatbot response", http.StatusInternalServerError)
