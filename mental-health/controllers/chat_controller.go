@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/jonreiter/govader"
@@ -34,6 +35,35 @@ type GeminiResponse struct {
 			} `json:"parts"`
 		} `json:"content"`
 	} `json:"candidates"`
+}
+
+func getLast5ChatHistory(db *sql.DB, sesiID int) []string {
+	rows, err := db.Query(`
+		SELECT p.isi_pesan, r.isi_respons
+		FROM pesan_konsultasi p
+		LEFT JOIN respons_chatbot r ON p.pesan_id = r.pesan_id
+		WHERE p.sesi_id = ?
+		ORDER BY p.pesan_id DESC
+		LIMIT 5
+	`, sesiID)
+	if err != nil {
+		fmt.Println("Gagal mengambil history:", err)
+		return nil
+	}
+	defer rows.Close()
+
+	var history []string
+	for rows.Next() {
+		var pesan, respons string
+		if err := rows.Scan(&pesan, &respons); err != nil {
+			fmt.Println("Error scanning:", err)
+			continue
+		}
+		entry := fmt.Sprintf("User: %s\nChatbot: %s", pesan, respons)
+		history = append([]string{entry}, history...) // prepend biar urut dari awal
+	}
+
+	return history
 }
 
 // function for chat handling
@@ -91,14 +121,53 @@ func ChatHandler(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		var finalPrompt string
+		var historyText string
+
+		if userInput.SesiID != nil {
+			historyLines := getLast5ChatHistory(db, *userInput.SesiID)
+			if len(historyLines) > 0 {
+				historyText = strings.Join(historyLines, "\n") + "\n"
+			}
+		}
+
 		if userInput.Analisa != "" && userInput.SesiID == nil {
+			// Kondisi: Analisa awal, belum ada sesi/history
 			finalPrompt = fmt.Sprintf(
-				"Kamu adalah chatbot yang membantu user dengan masalah mental. Berikut hasil analisis awal: \"%s\".\nSekarang user berkata: %s",
+				`Kamu adalah chatbot yang membantu user dengan masalah mental.
+				Berikut hasil analisis awal: "%s"
+
+				Sekarang user berkata: %s`,
 				userInput.Analisa,
 				userInput.Message,
 			)
+		} else if userInput.Analisa != "" {
+			// Analisa + History
+			finalPrompt = fmt.Sprintf(
+				`Kamu adalah chatbot yang membantu user dengan masalah mental.
+					Berikut hasil analisis awal: "%s"
+
+					Berikut ini adalah history chat user:
+					%s
+					Sekarang user berkata: %s`,
+				userInput.Analisa,
+				historyText,
+				userInput.Message,
+			)
+		} else if historyText != "" {
+			// History aja (chat lanjutan)
+			finalPrompt = fmt.Sprintf(
+				`%sUser: %s`,
+				historyText,
+				userInput.Message,
+			)
 		} else {
-			finalPrompt = userInput.Message
+			// Kondisi: New chat TANPA analisa, TANPA history
+			finalPrompt = fmt.Sprintf(
+				`Kamu adalah chatbot yang membantu user dengan masalah mental.
+
+User: %s`,
+				userInput.Message,
+			)
 		}
 		chatbotResponse, err := getGeminiResponse(finalPrompt)
 
